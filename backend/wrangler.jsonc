@@ -3,7 +3,6 @@
   "name": "backend",
   "main": "src/index.ts",
   "compatibility_date": "2026-03-11",
-  // "compatibility_flags": [
   //   "nodejs_compat"
   // ],
   // "vars": {
@@ -25,7 +24,7 @@
     {
       "binding": "DB",
       "database_name": "finance-app-db",
-      "database_id": "1154ce63-54c2-436f-b7d1-e8d38aa04c7a"
+      "database_id": "d2eb554f-1a26-413d-a050-762d59f9a32e"
     }
   ],
   // "ai": {
