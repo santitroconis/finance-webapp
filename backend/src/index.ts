@@ -7,7 +7,11 @@ type Bindings = {
   JWT_SECRET: string
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+type Variables = {
+  userId: string
+}
+
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 // Enable CORS for the frontend
 app.use('/api/*', cors({
@@ -41,8 +45,8 @@ app.post('/api/auth/register', async (c) => {
     ).bind(id, email, hashedPassword).run()
 
     return c.json({ message: 'User created' }, 201)
-  } catch (e: any) {
-    if (e.message?.includes('UNIQUE constraint failed')) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.includes('UNIQUE constraint failed')) {
       return c.json({ error: 'Email already exists' }, 400)
     }
     return c.json({ error: 'Server error' }, 500)
@@ -83,16 +87,16 @@ app.use('/api/*', async (c, next) => {
   try {
     const secret = c.env.JWT_SECRET || 'fallback-secret-for-local-dev'
     const payload = await verify(token, secret, 'HS256')
-    c.set('userId', payload.id)
+    c.set('userId', payload.id as string)
     await next()
-  } catch (e: any) {
+  } catch (e: unknown) {
     return c.json({ error: 'Unauthorized: Token Verification Failed' }, 401)
   }
 })
 
 // --- CATEGORIES ---
 app.get('/api/categories', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM categories WHERE user_id = ? ORDER BY created_at DESC'
   ).bind(userId).all()
@@ -100,7 +104,7 @@ app.get('/api/categories', async (c) => {
 })
 
 app.post('/api/categories', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const { name, type } = await c.req.json()
   if (!name || !type) return c.json({ error: 'Missing fields' }, 400)
   const id = crypto.randomUUID()
@@ -111,7 +115,7 @@ app.post('/api/categories', async (c) => {
 })
 
 app.delete('/api/categories/:id', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const id = c.req.param('id')
   await c.env.DB.prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').bind(id, userId).run()
   return c.json({ message: 'Category deleted' })
@@ -119,7 +123,7 @@ app.delete('/api/categories/:id', async (c) => {
 
 // --- RECURRING TRANSACTIONS ---
 app.get('/api/recurring', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const { results } = await c.env.DB.prepare(`
     SELECT rt.*, c.name as category_name 
     FROM recurring_transactions rt 
@@ -130,7 +134,7 @@ app.get('/api/recurring', async (c) => {
 })
 
 app.post('/api/recurring', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const body = await c.req.json()
   const { amount, type, category_id, expense_type, description, frequency, start_date } = body
   if (!amount || !type || !description || !frequency || !start_date) return c.json({ error: 'Missing fields' }, 400)
@@ -143,7 +147,7 @@ app.post('/api/recurring', async (c) => {
 })
 
 app.delete('/api/recurring/:id', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const id = c.req.param('id')
   await c.env.DB.prepare('DELETE FROM recurring_transactions WHERE id = ? AND user_id = ?').bind(id, userId).run()
   return c.json({ message: 'Recurring transaction deleted' })
@@ -151,7 +155,7 @@ app.delete('/api/recurring/:id', async (c) => {
 
 // --- TRANSACTIONS ---
 app.get('/api/transactions', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const { results } = await c.env.DB.prepare(`
     SELECT t.*, c.name as category_name 
     FROM transactions t 
@@ -164,7 +168,7 @@ app.get('/api/transactions', async (c) => {
 })
 
 app.post('/api/transactions', async (c) => {
-  const userId = c.get('userId' as any)
+  const userId = c.get('userId')
   const { amount, type, category_id, expense_type, description } = await c.req.json()
   if (!amount || !type || !description) return c.json({ error: 'Missing fields' }, 400)
 
@@ -177,7 +181,7 @@ app.post('/api/transactions', async (c) => {
 
 export default {
   fetch: app.fetch,
-  async scheduled(event: any, env: Bindings, ctx: any) {
+  async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
     console.log("Cron triggered:", event.cron)
     const today = new Date().toISOString().split('T')[0]
     
