@@ -3,6 +3,8 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import Categories from './pages/Categories'
+import Recurring from './pages/Recurring'
 import { useAuth } from './context/AuthContext'
 
 function App() {
@@ -19,6 +21,8 @@ function App() {
         
         {/* Private Routes */}
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
+        <Route path="/categories" element={isAuthenticated ? <Categories /> : <Navigate to="/login" replace />} />
+        <Route path="/recurring" element={isAuthenticated ? <Recurring /> : <Navigate to="/login" replace />} />
         
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

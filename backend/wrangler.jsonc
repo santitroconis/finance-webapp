@@ -3,6 +3,9 @@
   "name": "finance-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-03-11",
+  "triggers": {
+    "crons": [ "0 0 * * *" ]
+  },
   //   "nodejs_compat"
   // ],
   // "vars": {

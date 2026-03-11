@@ -35,6 +35,9 @@ export default function Dashboard() {
   const [amount, setAmount] = useState('')
   const [type, setType] = useState('expense')
   const [description, setDescription] = useState('')
+  const [categories, setCategories] = useState<any[]>([])
+  const [categoryId, setCategoryId] = useState('')
+  const [expenseType, setExpenseType] = useState('fixed')
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -46,8 +49,12 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const res = await apiFetch('/transactions')
-      setData(res)
+      const [txRes, catRes] = await Promise.all([
+        apiFetch('/transactions'),
+        apiFetch('/categories')
+      ])
+      setData(txRes)
+      setCategories(catRes.categories || [])
     } catch (e) {
       console.error(e)
     } finally {
@@ -65,13 +72,21 @@ export default function Dashboard() {
     try {
       await apiFetch('/transactions', {
         method: 'POST',
-        body: JSON.stringify({ amount: Number(amount), type, description })
+        body: JSON.stringify({ 
+          amount: Number(amount), 
+          type, 
+          description,
+          category_id: categoryId || null,
+          expense_type: type === 'expense' ? expenseType : null
+        })
       })
       
       // Reset form and reload list
       setAmount('')
       setDescription('')
       setType('expense')
+      setCategoryId('')
+      setExpenseType('fixed')
       setIsDialogOpen(false)
       loadData()
     } catch (e: any) {
@@ -87,9 +102,13 @@ export default function Dashboard() {
     <div className="container mx-auto p-4 max-w-5xl space-y-6 mt-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" /> Logout
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => navigate('/categories')}>Categories</Button>
+          <Button variant="outline" onClick={() => navigate('/recurring')}>Auto Charges</Button>
+          <Button variant="ghost" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -130,26 +149,49 @@ export default function Dashboard() {
                   <option value="income">Income</option>
                 </select>
               </div>
+
+              {type === 'expense' && (
+                <div className="space-y-2">
+                  <Label>Expense Type</Label>
+                  <select className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm border-input" value={expenseType} onChange={(e) => setExpenseType(e.target.value)}>
+                    <option value="fixed">Fixed</option>
+                    <option value="variable">Variable</option>
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
-                <Input 
-                  id="amount" 
-                  type="number" 
-                  step="0.01" 
-                  min="0"
-                  required 
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
+                <Label>Category</Label>
+                <select className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm border-input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="">None</option>
+                  {categories.filter(c => c.type === type).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input 
-                  id="description" 
-                  required 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Input 
+                    id="amount" 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    required 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input 
+                    id="description" 
+                    required 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
               </div>
               <Button type="submit" className="w-full">Save Transaction</Button>
             </form>
